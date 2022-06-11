@@ -15,5 +15,5 @@ Values
 INSERT INTO employee (first_name, last_name, role_id, manager_id)
 Values 
 ("John", "Doe", 1, 1),
-("Jane", "Doe", 2, 2),
+("Jane", "Doe", 2, NULL),
 ("Joe", "Doe", 3, 3);

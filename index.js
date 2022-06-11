@@ -104,7 +104,7 @@ const addDepartment = () => {
             validate: titleInput => {
                 if (titleInput) {
                     return true;
-                }else {
+                } else {
                     console.log('Please enter a department!')
                     return false;
                 }
@@ -116,12 +116,12 @@ const addDepartment = () => {
         const params = [departmentInput];
       //query the databases////
         db.query(SQL, params, function (err, results) {
-          return questions();
-      });
+            return questions();
+        });
   
-      app.use((req, res) => {
-          res.status(404).end();
-      });
+        app.use((req, res) => {
+            res.status(404).end();
+        });
     });
 };
 
@@ -141,7 +141,7 @@ db.query(departmentSQL, (err, response) => {
             validate: titleInput => {
                 if (titleInput) {
                     return true;
-                }else {
+                } else {
                     console.log('Please enter a title!')
                     return false;
                 }
@@ -154,7 +154,7 @@ db.query(departmentSQL, (err, response) => {
             validate: titleInput => {
                 if (titleInput) {
                     return true;
-                }else {
+                } else {
                     console.log('Please enter a salary!')
                     return false;
                 }
@@ -172,7 +172,7 @@ db.query(departmentSQL, (err, response) => {
         var departmentID;
         response.forEach((department) => {
             if (
-                departmentInput === department.department_name
+                departmentList === department.department_name
             ) {
                 departmentID = department.id;
             }
@@ -197,8 +197,8 @@ var employeeSQL = `SELECT * FROM employee LEFT JOIN roles ON employee.role_id = 
 db.query(employeeSQL, (err, response) => {
     var managerList = response.map(({ id, first_name, last_name }) => ({ name: first_name + ' ' + last_name, value: id }));
 
-    var rolesList = [];
-    response.forEach((role) => {rolesList.push(`${role.title}`)});
+    // var rolesList = [];
+    // response.forEach((role) => {rolesList.push(`${role.title}`)});
 
     inquirer.prompt(
         [{
@@ -234,10 +234,23 @@ db.query(employeeSQL, (err, response) => {
             choices: rolesList
         },
         {
+            type: 'confirm',
+            name: 'confirmMan',
+            message: 'Is this employee a manager?',
+            default: true
+        },
+        {
             type: 'list',
             name: 'managerInput',
             message: 'Who is the manager of the employee?',
-            choices: managerList
+            choices: managerList,
+            when: ({ confirmMan }) => {
+               if( confirmMan) {
+                     return true;
+                } else {
+                    return false;
+                }
+            }
         }]
     )
     .then(({ firstNameInput, lastNameInput, roleInput, managerInput }) => {
@@ -278,37 +291,36 @@ db.query(employeeSQL, (err, response) => {
 })};
 
 const updateEmployeeRole = () => {
-    var employeeSQL = `SELECT * FROM employee LEFT JOIN roles ON employee.role_id = roles.id`;
+    var employeeSQL = `SELECT * FROM employee`;
     db.query(employeeSQL, (err, response) => {
         var employeeList = [];
         response.forEach((employee) => {employeeList.push(`${employee.first_name} ${employee.last_name}`);});
-        var rolesList = [];
-        response.forEach((roles) => {rolesList.push(`${roles.title}`)});
+
 
         inquirer.prompt(
-            [{
+            {
                 type: 'list',
                 name: 'employeeInput',
                 message: 'Which employee would you like to update?',
                 choices: employeeList
-            },
-            {
-                type: 'list',
-                name: 'roleUpdate',
-                message: 'What is the new role of the employee?',
-                choices: rolesList
-            }]
+            }
+            // {
+            //     type: 'list',
+            //     name: 'roleUpdate',
+            //     message: 'What is the new role of the employee?',
+            //     choices: rolesList
+            // }]
         )
         .then((answer) => {
 
-            var rolesID;
-            response.forEach((roles) => {
-                if (
-                    answer.roleUpdate === roles.title
-                ) {
-                    rolesID = roles.id;
-                }
-            });
+            // var rolesID;
+            // response.forEach((roles) => {
+            //     if (
+            //         answer.roleUpdate === roles.title
+            //     ) {
+            //         rolesID = roles.id;
+            //     }
+            // });
         
         
 
@@ -321,17 +333,49 @@ const updateEmployeeRole = () => {
                 }
             });
             const SQL = `UPDATE employee SET employee.role_id = ? WHERE employee.id = ?`;
-            const params = [rolesID, employeeId];
+            const params = [employeeId];
             db.query(SQL, params, function (err, results) {
-                return questions();
+                return askRole (employeeID);
             }
             );
             app.use((req, res) => {
                 res.status(404).end();
+            });
+        });
+    })
+};
+
+const askRole = (employeeID) => {
+    var rolesSQL = `SELECT * FROM roles`;
+    db.query(rolesSQL, (err, response) => {
+        var rolesList = [];
+        response.forEach((role) => {rolesList.push(`${role.title}`)});
+        
+        inquirer.prompt(
+            {
+                type: 'list',
+                name: 'roleUpdate',
+                message: 'What is the new role of the employee?',
+                choices: rolesList
             }
-            );
-        }
-        );
-    }
-    );
-}
+        )
+        .then((answer) => {
+            var rolesID;
+            response.forEach((roles) => {
+                if (
+                    answer.roleUpdate === roles.title
+                ) {
+                    rolesID = roles.id;
+                }
+            });
+            const SQL = `UPDATE employee SET employee.role_id = ? WHERE employee.id = ?`;
+            const params = [rolesID, employeeID];
+            db.query(SQL, params, function (err, results) {
+                return questions();
+            });
+            app.use((req, res) => {
+                res.status(404).end();
+            });
+        })
+    })
+};
