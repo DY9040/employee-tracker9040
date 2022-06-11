@@ -126,6 +126,13 @@ const addDepartment = () => {
 };
 
 const addRole = () => {
+
+var departmentSQL = `SELECT * FROM department`;
+db.query(departmentSQL, (err, response) => {
+    var departmentList = [];
+    response.forEach((department) => {departmentList.push(`${department.department_name}`)});
+
+
     inquirer.prompt(
         [{
             type: 'input',
@@ -157,13 +164,22 @@ const addRole = () => {
             type: 'list',
             name: 'departmentInput',
             message: 'What is the department of the role?',
-            choices: ['1', '2', '3', '4', '5']
+            choices: departmentList
         }]
     )
     .then(({ titleInput, salaryInput, departmentList }) => {
 
+        var departmentID;
+        response.forEach((department) => {
+            if (
+                departmentInput === department.department_name
+            ) {
+                departmentID = department.id;
+            }
+        });
+
         const SQL = `INSERT INTO roles (title, salary, department_id) VALUES (?, ?, ?)`;
-        const params = [titleInput, salaryInput, departmentList];
+        const params = [titleInput, salaryInput, departmentID];
         //query the databases////
         db.query(SQL, params, function (err, results) {
         return questions();
@@ -173,9 +189,17 @@ const addRole = () => {
         res.status(404).end();
     });
     });
-};
+})};
 
 const addEmployee = () => {
+
+var employeeSQL = `SELECT * FROM employee LEFT JOIN roles ON employee.role_id = roles.id`;
+db.query(employeeSQL, (err, response) => {
+    var managerList = response.map(({ id, first_name, last_name }) => ({ name: first_name + ' ' + last_name, value: id }));
+
+    var rolesList = [];
+    response.forEach((role) => {rolesList.push(`${role.title}`)});
+
     inquirer.prompt(
         [{
             type: 'input',
@@ -207,19 +231,40 @@ const addEmployee = () => {
             type: 'list',
             name: 'roleInput',
             message: 'What is the role of the employee?',
-            choices: ['1', '2', '3']
+            choices: rolesList
         },
         {
             type: 'list',
             name: 'managerInput',
             message: 'Who is the manager of the employee?',
-            choices: ['1', '2', '3']
+            choices: managerList
         }]
     )
     .then(({ firstNameInput, lastNameInput, roleInput, managerInput }) => {
 
+        var rolesID;
+        response.forEach((roles) => {
+            if (
+                roleInput === roles.title
+            ) {
+                rolesID = roles.id;
+            }
+        }
+        );
+
+        var managerID;
+        response.forEach((employee) => {
+            if (
+                managerInput === employee.manager_id
+            ) {
+                managerID = employee.id;
+            }
+        }
+        );
+
+
         const employeeSQL = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)`;
-        const params = [firstNameInput, lastNameInput, roleInput, managerInput];
+        const params = [firstNameInput, lastNameInput, rolesID, managerID];
 
     //query the databases////
    db.query(employeeSQL, params, function (err, results) {
@@ -230,13 +275,15 @@ const addEmployee = () => {
         res.status(404).end();
     });
     });
-};
+})};
 
 const updateEmployeeRole = () => {
-    var rSQL = `SELECT * FROM employee`;
-    db.query(rSQL, (err, response) => {
+    var employeeSQL = `SELECT * FROM employee LEFT JOIN roles ON employee.role_id = roles.id`;
+    db.query(employeeSQL, (err, response) => {
         var employeeList = [];
         response.forEach((employee) => {employeeList.push(`${employee.first_name} ${employee.last_name}`);});
+        var rolesList = [];
+        response.forEach((roles) => {rolesList.push(`${roles.title}`)});
 
         inquirer.prompt(
             [{
@@ -249,20 +296,32 @@ const updateEmployeeRole = () => {
                 type: 'list',
                 name: 'roleUpdate',
                 message: 'What is the new role of the employee?',
-                choices: ['1', '2', '3']
+                choices: rolesList
             }]
         )
-        .then(({ employeeInput, roleUpdate }) => {
+        .then((answer) => {
+
+            var rolesID;
+            response.forEach((roles) => {
+                if (
+                    answer.roleUpdate === roles.title
+                ) {
+                    rolesID = roles.id;
+                }
+            });
+        
+        
+
             var employeeId;
             response.forEach((employee) => {
                 if (
-                    employeeInput === `${employee.first_name} ${employee.last_name}`
+                   answer.employeeInput === `${employee.first_name} ${employee.last_name}`
                 ) {
                     employeeId = employee.id;
                 }
             });
-            const SQL = `UPDATE employee SET role_id = ? WHERE id = ?`;
-            const params = [roleUpdate, employeeId];
+            const SQL = `UPDATE employee SET employee.role_id = ? WHERE employee.id = ?`;
+            const params = [rolesID, employeeId];
             db.query(SQL, params, function (err, results) {
                 return questions();
             }
